@@ -1,7 +1,9 @@
+import plotly.express as px
 import streamlit as st
 import preprocessor,stats
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 st.sidebar.title("Whatsapp Chat Analyzer")
 
@@ -11,6 +13,7 @@ if uploaded_file is not None:
     data = bytes_data.decode("utf-8")
     df = preprocessor.textPreProcessor(data)
     st.dataframe(df)
+    st.write(df.columns)
     # fetch unique users
     user_list = df['Sender'].unique().tolist()
     # user_list.remove('group_notification')
@@ -73,7 +76,7 @@ if uploaded_file is not None:
 
         # Count the number of messages exchanged for each sender and each month
         sender_msg_counts = df.groupby([df['datet'].dt.to_period('M'), 'Sender']).size().unstack(fill_value=0)
-
+        st.write(sender_msg_counts)
         # Plot the graph
         fig, ax = plt.subplots(figsize=(15, 6))
         bar_width = 0.3
@@ -149,7 +152,8 @@ if uploaded_file is not None:
 
         ax.barh(most_common_df[0],most_common_df[1])
         plt.xticks(rotation='vertical')
-
+        plt.xlabel('Counts')
+        plt.ylabel('Words')
         st.title('Most commmon words')
         st.pyplot(fig)
 
@@ -167,6 +171,29 @@ if uploaded_file is not None:
             fig,ax = plt.subplots()
             ax.pie(emoji_df[1].head(),labels=emoji_df[0].head(),autopct="%0.2f")
             st.pyplot(fig)
+            
+        # Most Talked hours
+        max_duration_per_day = df.set_index('datet').groupby(pd.Grouper(freq='D'))['group_duration'].max().reset_index()
+        max_duration_per_day.rename(columns={'datet': 'Date', 'group_duration': 'MaxDuration(hours)'}, inplace=True)
+        max_duration_per_day.sort_values('MaxDuration(hours)', ascending=False, inplace=True)
+        max_duration_per_day['Date']=max_duration_per_day.Date.dt.date
+        st.write(max_duration_per_day)
+        
+
+        fig, ax = plt.subplots(figsize=(12, 8))
+        n = 50  # Replace with the desired number of top days to plot
+        top_n_days = max_duration_per_day.head(n)
+        top_n_days.reset_index(drop=True,inplace=True)
+        # Plotting the bar graph
+
+        n = 50  # Replace with the desired number of top days to plot
+        top_n_days = max_duration_per_day.head(n)
+
+        fig = px.bar(top_n_days, x='Date', y='MaxDuration(hours)', labels={'Date': 'Timeline', 'MaxDuration(hours)': 'Max Duration (hours)'})
+        fig.update_traces(hovertemplate='Date: %{x}<br>Max Duration: %{y} hours')
+        fig.update_layout(title='Top {} Days with Maximum Continuous Talk'.format(n), xaxis_title='Timeline', yaxis_title='Max Duration (hours)', xaxis={'categoryorder':'total descending'})
+        st.plotly_chart(fig)
+
 
 
 
