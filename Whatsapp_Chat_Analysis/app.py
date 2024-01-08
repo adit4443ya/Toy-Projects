@@ -13,7 +13,6 @@ if uploaded_file is not None:
     data = bytes_data.decode("utf-8")
     df = preprocessor.textPreProcessor(data)
     st.dataframe(df)
-    st.write(df.columns)
     # fetch unique users
     user_list = df['Sender'].unique().tolist()
     # user_list.remove('group_notification')
@@ -76,7 +75,6 @@ if uploaded_file is not None:
 
         # Count the number of messages exchanged for each sender and each month
         sender_msg_counts = df.groupby([df['datet'].dt.to_period('M'), 'Sender']).size().unstack(fill_value=0)
-        st.write(sender_msg_counts)
         # Plot the graph
         fig, ax = plt.subplots(figsize=(15, 6))
         bar_width = 0.3
@@ -173,28 +171,23 @@ if uploaded_file is not None:
             st.pyplot(fig)
             
         # Most Talked hours
+        df['time_diff'] = df['datet'].diff().dt.total_seconds() / 60
+        df['continuous_group'] = (df['time_diff'] > 10).cumsum()
+        df['group_duration'] = df.groupby(['continuous_group'])['datet'].transform(lambda x: (x.max() - x.min()).total_seconds() / 3600)
+
         max_duration_per_day = df.set_index('datet').groupby(pd.Grouper(freq='D'))['group_duration'].max().reset_index()
         max_duration_per_day.rename(columns={'datet': 'Date', 'group_duration': 'MaxDuration(hours)'}, inplace=True)
         max_duration_per_day.sort_values('MaxDuration(hours)', ascending=False, inplace=True)
         max_duration_per_day['Date']=max_duration_per_day.Date.dt.date
-        st.write(max_duration_per_day)
         
 
         fig, ax = plt.subplots(figsize=(12, 8))
-        n = 50  # Replace with the desired number of top days to plot
-        top_n_days = max_duration_per_day.head(n)
+        n = 50
+        top_n_days = max_duration_per_day.head(int(n))
         top_n_days.reset_index(drop=True,inplace=True)
         # Plotting the bar graph
-
-        n = 50  # Replace with the desired number of top days to plot
         top_n_days = max_duration_per_day.head(n)
-
         fig = px.bar(top_n_days, x='Date', y='MaxDuration(hours)', labels={'Date': 'Timeline', 'MaxDuration(hours)': 'Max Duration (hours)'})
         fig.update_traces(hovertemplate='Date: %{x}<br>Max Duration: %{y} hours')
         fig.update_layout(title='Top {} Days with Maximum Continuous Talk'.format(n), xaxis_title='Timeline', yaxis_title='Max Duration (hours)', xaxis={'categoryorder':'total descending'})
         st.plotly_chart(fig)
-
-
-
-
-

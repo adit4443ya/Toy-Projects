@@ -43,9 +43,5 @@ def textPreProcessor(data):
     s=s.split('\n')
     df['Cleaned MSG'] = df['Message'].apply(lambda x: ' '.join([word for word in x.split() if word not in s]))
     df=df[df['Sender']!='Aditya Trivedi:']
-    df['time_diff'] = df['datet'].diff().dt.total_seconds() / 60
-    df['continuous_group'] = (df['time_diff'] > 10).cumsum()
-    df['group_duration'] = df.groupby(['continuous_group'])['datet'].transform(lambda x: (x.max() - x.min()).total_seconds() / 3600)
-
     
     return df
